@@ -1140,6 +1140,22 @@ func (db *DB) queryConn(dc *driverConn, releaseConn func(error), query string, a
 		rowsi:       rowsi,
 		closeStmt:   si,
 	}
+
+	// the column information should have been populated by now
+	// after the internal driver call to Query
+	if colget, ok := ds.si.(driver.ColumnGetter); ok {
+		schema, err := colget.GetColumns()
+		if err != nil {
+			dc.Lock()
+			si.Close()
+			dc.Unlock()
+			releaseConn(err)
+			return nil, err
+		}
+
+		rows.schema = schema
+	}
+
 	return rows, nil
 }
 
@@ -1672,6 +1688,7 @@ func rowsiFromStatement(ds driverStmt, args ...interface{}) (driver.Rows, error)
 	if err != nil {
 		return nil, err
 	}
+
 	return rowsi, nil
 }
 
@@ -1754,6 +1771,7 @@ type Rows struct {
 	lastcols  []driver.Value
 	lasterr   error       // non-nil only if closed is true
 	closeStmt driver.Stmt // if non-nil, statement to Close on close
+	schema    Schema
 }
 
 // Next prepares the next result row for reading with the Scan method. It
@@ -1797,6 +1815,17 @@ func (rs *Rows) Columns() ([]string, error) {
 		return nil, errors.New("sql: no Rows available")
 	}
 	return rs.rowsi.Columns(), nil
+}
+
+// Schema returns the column metadata for each column in a row.
+func (rs *Rows) Schema() (Schema, error) {
+	if rs.closed {
+		return nil, errors.New("sql: Rows are closed")
+	}
+	if rs.rowsi == nil {
+		return nil, errors.New("sql: no Rows available")
+	}
+	return rs.schema, nil
 }
 
 // Scan copies the columns in the current row into the values pointed
@@ -1988,3 +2017,5 @@ func withLock(lk sync.Locker, fn func()) {
 	defer lk.Unlock() // in case fn panics
 	fn()
 }
+
+type Schema []driver.Column

@@ -44,3 +44,20 @@ func ExampleDB_QueryRow() {
 		fmt.Printf("Username is %s\n", username)
 	}
 }
+
+func ExampleDB_QueryRowColumns() {
+	id := 123
+
+	rows, err := db.Query("SELECT username FROM users WHERE id = ?", id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer rows.Close()
+
+	s, err := rows.Schema()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("columns: %+v", s)
+}

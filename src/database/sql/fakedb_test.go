@@ -59,6 +59,7 @@ type table struct {
 	mu      sync.Mutex
 	colname []string
 	coltype []string
+	cols    Schema
 	rows    []*row
 }
 
@@ -111,6 +112,7 @@ type fakeStmt struct {
 
 	closed bool
 
+	cols         []driver.Column
 	colName      []string      // used by CREATE, INSERT, SELECT (selected columns)
 	colType      []string      // used by CREATE
 	colValue     []interface{} // used by INSERT (mix of strings and "?" for bound params)
@@ -234,7 +236,43 @@ func (db *fakeDB) createTable(name string, columnNames, columnTypes []string) er
 		return fmt.Errorf("create table of %q len(names) != len(types): %d vs %d",
 			name, len(columnNames), len(columnTypes))
 	}
-	db.tables[name] = &table{colname: columnNames, coltype: columnTypes}
+
+	table := &table{colname: columnNames, coltype: columnTypes}
+
+	for i, c := range table.colname {
+		var t driver.Type
+		switch table.coltype[i] {
+		case "string":
+			t = fakeStringType
+		case "int8":
+			t = fakeInt8Type
+		case "int16":
+			t = fakeInt16Type
+		case "int32":
+			t = fakeInt32Type
+		case "int64":
+			t = fakeInt64Type
+		case "uint8":
+			t = fakeUInt8Type
+		case "uint16":
+			t = fakeUInt16Type
+		case "uint32":
+			t = fakeUInt32Type
+		case "uint64":
+			t = fakeUInt64Type
+		case "bool":
+			t = fakeBoolType
+		}
+
+		table.cols = append(table.cols, driver.Column{
+			Name:  c,
+			Type:  t,
+			Index: i,
+		})
+	}
+
+	db.tables[name] = table
+
 	return nil
 }
 
@@ -692,6 +730,8 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 			return nil, fmt.Errorf("fakedb: unknown column name %q", name)
 		}
 		colIdx[name] = idx
+
+		s.cols = append(s.cols, t.cols[idx])
 	}
 
 	mrows := []*row{}
@@ -735,6 +775,10 @@ func (s *fakeStmt) NumInput() int {
 		panic(s.panic)
 	}
 	return s.placeholders
+}
+
+func (s *fakeStmt) GetColumns() ([]driver.Column, error) {
+	return s.cols, nil
 }
 
 // hook to simulate broken connections
@@ -882,3 +926,254 @@ func converterForType(typ string) driver.ValueConverter {
 	}
 	panic("invalid fakedb column type of " + typ)
 }
+
+type fakeString struct{}
+
+func (fakeString) String() string {
+	return "fakeString"
+}
+
+func (fakeString) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case string:
+		return t, nil
+	case fmt.Stringer:
+		return t.String(), nil
+	default:
+		return fmt.Sprintf("%v", v), nil
+	}
+}
+
+func (fakeString) Equal(t driver.Type) bool {
+	s := t.String()
+
+	return s == "string"
+}
+
+func (fakeString) AssignableTo(t driver.Type) bool {
+	s := t.String()
+
+	return s == "string"
+}
+
+type fakeInt8 struct{}
+
+func (fakeInt8) String() string {
+	return "int8"
+}
+
+func (fakeInt8) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case int64, int32, int16, int8:
+		return t, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeInt8) Equal(t driver.Type) bool {
+	return t.String() == "int8"
+}
+
+func (fakeInt8) AssignableTo(t driver.Type) bool {
+	return t.String() == "int8"
+}
+
+type fakeInt16 struct{}
+
+func (fakeInt16) String() string {
+	return "int16"
+}
+
+func (fakeInt16) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case int64, int32, int16, int8:
+		return t, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeInt16) Equal(t driver.Type) bool {
+	return t.String() == "int16"
+}
+
+func (fakeInt16) AssignableTo(t driver.Type) bool {
+	return t.String() == "int16"
+}
+
+type fakeInt32 struct{}
+
+func (fakeInt32) String() string {
+	return "int32"
+}
+
+func (fakeInt32) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case int64, int32, int16, int8:
+		return t, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeInt32) Equal(t driver.Type) bool {
+	return t.String() == "int32"
+}
+
+func (fakeInt32) AssignableTo(t driver.Type) bool {
+	return t.String() == "int32"
+}
+
+type fakeInt64 struct{}
+
+func (fakeInt64) String() string {
+	return "int64"
+}
+
+func (fakeInt64) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case int64, int32, int16, int8:
+		return t, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeInt64) Equal(t driver.Type) bool {
+	return t.String() == "int64"
+}
+
+func (fakeInt64) AssignableTo(t driver.Type) bool {
+	return t.String() == "int64"
+}
+
+type fakeUInt8 struct{}
+
+func (fakeUInt8) String() string {
+	return "uint8"
+}
+
+func (fakeUInt8) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case int64, int32, int16, int8:
+		return t, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeUInt8) Equal(t driver.Type) bool {
+	return t.String() == "uint8"
+}
+
+func (fakeUInt8) AssignableTo(t driver.Type) bool {
+	return t.String() == "uint8"
+}
+
+type fakeUInt16 struct{}
+
+func (fakeUInt16) String() string {
+	return "uint16"
+}
+
+func (fakeUInt16) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case int64, int32, int16, int8:
+		return t, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeUInt16) Equal(t driver.Type) bool {
+	return t.String() == "uint16"
+}
+
+func (fakeUInt16) AssignableTo(t driver.Type) bool {
+	return t.String() == "uint16"
+}
+
+type fakeUInt32 struct{}
+
+func (fakeUInt32) String() string {
+	return "uint32"
+}
+
+func (fakeUInt32) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case int64, int32, int16, int8:
+		return t, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeUInt32) Equal(t driver.Type) bool {
+	return t.String() == "uint32"
+}
+
+func (fakeUInt32) AssignableTo(t driver.Type) bool {
+	return t.String() == "uint32"
+}
+
+type fakeUInt64 struct{}
+
+func (fakeUInt64) String() string {
+	return "uint64"
+}
+
+func (fakeUInt64) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case int64, int32, int16, int8:
+		return t, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeUInt64) Equal(t driver.Type) bool {
+	return t.String() == "uint64"
+}
+
+func (fakeUInt64) AssignableTo(t driver.Type) bool {
+	return t.String() == "uint64"
+}
+
+type fakeBool struct{}
+
+func (fakeBool) String() string {
+	return "bool"
+}
+
+func (fakeBool) ConvertValue(v interface{}) (driver.Value, error) {
+	switch t := v.(type) {
+	case bool:
+		return t, nil
+	case int:
+		return t > 0, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (fakeBool) Equal(t driver.Type) bool {
+	return t.String() == "bool"
+}
+
+func (fakeBool) AssignableTo(t driver.Type) bool {
+	return t.String() == "bool"
+}
+
+var (
+	fakeStringType = fakeString{}
+	fakeInt8Type   = fakeInt8{}
+	fakeInt16Type  = fakeInt16{}
+	fakeInt32Type  = fakeInt32{}
+	fakeInt64Type  = fakeInt64{}
+	fakeUInt8Type  = fakeUInt8{}
+	fakeUInt16Type = fakeUInt16{}
+	fakeUInt32Type = fakeUInt32{}
+	fakeUInt64Type = fakeUInt64{}
+	fakeBoolType   = fakeBool{}
+)

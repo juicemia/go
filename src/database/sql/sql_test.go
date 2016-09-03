@@ -317,6 +317,27 @@ func TestRowsColumns(t *testing.T) {
 	}
 }
 
+func TestRowsSchema(t *testing.T) {
+	db := newTestDB(t, "people")
+	defer closeDB(t, db)
+
+	rows, err := db.Query("SELECT|people|age,name|")
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+
+	defer rows.Close()
+
+	schema, err := rows.Schema()
+	if err != nil {
+		t.Fatalf("Schema: %v", err)
+	}
+
+	if slen := len(schema); slen != 2 {
+		t.Fatalf("expected 2 columns, got %v", slen)
+	}
+}
+
 func TestQueryRow(t *testing.T) {
 	db := newTestDB(t, "people")
 	defer closeDB(t, db)

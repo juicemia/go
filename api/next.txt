@@ -1,0 +1,17 @@
+pkg database/sql, type Column struct
+pkg database/sql, type Column struct, Generic Type
+pkg database/sql, type Column struct, Index int
+pkg database/sql, type Column struct, Key bool
+pkg database/sql, type Column struct, Length int
+pkg database/sql, type Column struct, Name string
+pkg database/sql, type Column struct, Nullable bool
+pkg database/sql, type Column struct, Precision int
+pkg database/sql, type Column struct, Scale int
+pkg database/sql, type Column struct, Serial bool
+pkg database/sql, type Column struct, Type Type
+pkg database/sql, type Schema []Column
+pkg database/sql/driver, type Type interface { AssignableTo, ConvertValue, Equal, String }
+pkg database/sql/driver, type Type interface, AssignableTo(Type) bool
+pkg database/sql/driver, type Type interface, ConvertValue(interface{}) (Value, error)
+pkg database/sql/driver, type Type interface, Equal(Type) bool
+pkg database/sql/driver, type Type interface, String() string

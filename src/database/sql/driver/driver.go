@@ -8,7 +8,10 @@
 // Most code should use package sql.
 package driver
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Value is a value that drivers must be able to handle.
 // It is either nil or an instance of one of these types:
@@ -139,6 +142,12 @@ type Stmt interface {
 	Query(args []Value) (Rows, error)
 }
 
+// ColumnGetter may be optionally implemented by Stmt if the statement
+// is aware of its own columns' metadata.
+type ColumnGetter interface {
+	GetColumns() ([]Column, error)
+}
+
 // ColumnConverter may be optionally implemented by Stmt if the
 // statement is aware of its own columns' types and can convert from
 // any type to a driver Value.
@@ -204,4 +213,31 @@ func (noRows) LastInsertId() (int64, error) {
 
 func (noRows) RowsAffected() (int64, error) {
 	return 0, errors.New("no RowsAffected available after DDL statement")
+}
+
+// Type entity in terms of the database.
+type Type interface {
+	fmt.Stringer
+	ValueConverter
+
+	Equal(Type) bool
+	AssignableTo(Type) bool
+}
+
+// Column is column information as reported by the database.
+type Column struct {
+	Name    string // Columnn name.
+	Index   int    // Column zero based index as appearing in result.
+	Type    Type   // The data type as reported from the driver.
+	Generic Type   // The generic data type as reported from the driver.
+
+	// Length of the column as it makes sense per type.
+	// If Length is negative assume unlimited length.
+	Length int
+
+	Nullable  bool // True if the column type can be null.
+	Key       bool // True if the column is part of the key.
+	Serial    bool // True if the column is auto-incrementing.
+	Precision int  // For decimal types, the precision.
+	Scale     int  // For types with scale, including decimal.
 }
